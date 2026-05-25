@@ -105,5 +105,9 @@ missing or stubbed — ask for it. Files:
   - Bootstrapped repo + CLAUDE.md.
   - Scope changes: GitHub-is-home (dropped PC-path / OneDrive rules);
     ART is text-only prompt generation (no fal.ai MCP).
-  - Scaffolding committed. `copy.js` blocked on `voice_guidelines.md`
-    paste from operator.
+  - Scaffolding committed.
+  - `voice_guidelines.md` pasted. `visual_identity.md` and
+    `fal_ai_templates.md` are scaffolds with TODOs.
+  - **`src/copy.js` shipped.** Reads `brand/voice_guidelines.md` at runtime,
+    calls Claude (Opus 4.7 + adaptive thinking) with voice as system prompt.
+    Awaiting operator review before formatter.js / art.js / orchestrator.js.
