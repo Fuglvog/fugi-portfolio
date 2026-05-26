@@ -110,4 +110,11 @@ missing or stubbed — ask for it. Files:
     `fal_ai_templates.md` are scaffolds with TODOs.
   - **`src/copy.js` shipped.** Reads `brand/voice_guidelines.md` at runtime,
     calls Claude (Opus 4.7 + adaptive thinking) with voice as system prompt.
-    Awaiting operator review before formatter.js / art.js / orchestrator.js.
+  - **`scripts/dry-run.js` shipped.** Token-free preview of the request
+    payload and the parsed return value. Use for voice/prompt iteration.
+  - **`src/formatter.js` shipped.** Pure function: collapses newlines for
+    X (single-line only), truncates to `maxChars` on word boundary with
+    `…`, warns to stderr on truncation. No I/O.
+  - Next: `art.js` (blocked on visual_identity.md + fal_ai_templates.md
+    being filled in) or `orchestrator.js` (can ship now — art.js can
+    return a placeholder until brand visuals land).
