@@ -99,6 +99,39 @@ missing or stubbed — ask for it. Files:
 
 ---
 
+## Deferred — pick up next session
+
+The COPY + FORMATTER + ORCHESTRATOR pipeline is live and produces usable
+CSV rows today. ART is the only piece still stubbed.
+
+**Why ART is deferred:** it's not blocked on code, it's blocked on
+content. `brand/voice_guidelines.md` is the only brand file with real
+content. The two visual files are scaffolds:
+
+| File | Status | What it needs |
+|---|---|---|
+| `brand/visual_identity.md` | Mostly TODO | Exact hex values, logo rules, typography, cover/thumbnail style, recurring motifs |
+| `brand/fal_ai_templates.md` | Scaffold only | Refined per-use templates (track cover, YouTube thumb, vertical cover, story graphic) once first generations are done |
+
+Implementing `art.js` against the current files would produce generic
+prompts that violate the voice file's "specifics over adjectives" rule.
+Honest stub > misleading output. The orchestrator catches `art.js`'s
+throw and leaves `art_prompt` empty in the CSV — operator can hand-write
+art prompts for now.
+
+**Order of operations when picking up:**
+1. Operator fills in `brand/visual_identity.md` (exact hex, typography,
+   cover style — the "TODO — Bagel to confirm" section).
+2. Operator refines `brand/fal_ai_templates.md` per-use templates.
+3. Implement `src/art.js`: reads both visual files + the idea, calls
+   Claude with them as system context, returns a fal.ai prompt string.
+   Pattern matches `copy.js` (Opus 4.7, adaptive thinking, no streaming,
+   read brand files at runtime — single source of truth).
+4. No orchestrator changes needed — it already imports and calls
+   `buildArtPrompt` with try/catch.
+
+---
+
 ## Session log
 
 - **2026-05-25 — Session 1.**
@@ -124,5 +157,5 @@ missing or stubbed — ask for it. Files:
     not source. The `out/` directory stays via `.gitkeep`.
   - **Pipeline is end-to-end runnable.** Operator can now run
     `node src/orchestrator.js "idea" platform` and get a posts.csv row.
-    Art prompt empty until art.js lands.
-  - Next: `art.js` (needs visual_identity.md + fal_ai_templates.md filled).
+  - **Session closed.** ART deferred (see above). README updated to
+    reflect actual CLI shape + deferred status.

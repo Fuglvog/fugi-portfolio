@@ -12,16 +12,35 @@ See `CLAUDE.md` for full scope.
 npm install
 cp .env.example .env       # then fill ANTHROPIC_API_KEY
 ```
-Paste the brand files (voice_guidelines.md, visual_identity.md,
-fal_ai_templates.md) into `brand/`.
+
+`brand/voice_guidelines.md` is committed. `brand/visual_identity.md` and
+`brand/fal_ai_templates.md` are scaffolds with TODOs — fill them in when
+ready (the ART task is deferred until they're real).
 
 ## Usage
 ```
-npm run post -- "your idea here" --platform tiktok
+node src/orchestrator.js "your idea here" [platform] [datetime]
 ```
-Appends a row to `out/posts.csv`. Generate the cover image yourself
-using the `art_prompt` column, then fill `media_path` by hand and import
-the CSV into your scheduler.
+Platforms: `tiktok` (default), `ig`, `x`, `youtube`. Datetime is optional —
+leave empty and pick a slot in the scheduler UI.
 
-## Platforms supported
-`tiktok`, `ig`, `x`, `youtube`
+Appends a row to `out/posts.csv`. Until `art.js` is implemented, the
+`art_prompt` column is empty — generate the cover image yourself and
+fill `media_path` by hand before importing the CSV.
+
+## Token-free prompt iteration
+```
+node scripts/dry-run.js "your idea" tiktok
+```
+Prints the exact request body that would hit the API and a mocked
+response through the same parse logic. No API call, no tokens spent.
+Use for tuning `brand/voice_guidelines.md` or the system prompt wrapper.
+
+## Files
+- `src/copy.js` — caption draft via Claude
+- `src/formatter.js` — platform shaping (X newline collapse, truncation)
+- `src/art.js` — fal.ai prompt builder (**stub**; see CLAUDE.md)
+- `src/orchestrator.js` — wires them together, writes CSV
+- `src/csv.js` — CSV append/header logic
+- `src/platforms.js` — per-platform config
+- `scripts/dry-run.js` — token-free preview
