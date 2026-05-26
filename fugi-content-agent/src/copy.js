@@ -4,7 +4,7 @@ import 'dotenv/config';
 import { getPlatform } from './platforms.js';
 
 const VOICE_PATH = 'brand/voice_guidelines.md';
-const MODEL = 'claude-opus-4-7';
+export const MODEL = 'claude-opus-4-7';
 
 function loadVoice() {
   if (!existsSync(VOICE_PATH)) {
@@ -13,7 +13,7 @@ function loadVoice() {
   return readFileSync(VOICE_PATH, 'utf8');
 }
 
-function buildSystem(voice) {
+export function buildSystem(voice) {
   return [
     "You draft social-media captions as FüGï. The voice guidelines below are the authority — match them. Never break voice for engagement bait, hype, or 'thrilled to announce' filler. Return only the caption text — no preamble, no quotes, no notes, no explanation.",
     '',
