@@ -3,26 +3,33 @@ import Anthropic from '@anthropic-ai/sdk';
 import 'dotenv/config';
 import { getPlatform } from './platforms.js';
 
-const VOICE_PATH = 'brand/voice_guidelines.md';
 export const MODEL = 'claude-opus-4-7';
 
-function loadVoice() {
-  if (!existsSync(VOICE_PATH)) {
-    throw new Error(`Missing ${VOICE_PATH}. Paste brand/voice_guidelines.md first.`);
+export function voicePath(brand) {
+  if (!brand || typeof brand !== 'string') {
+    throw new Error('brand (string) required — e.g. "fugi" or "bs". No default to prevent cross-contamination.');
   }
-  return readFileSync(VOICE_PATH, 'utf8');
+  return `brands/${brand}/voice_guidelines.md`;
 }
 
-export function buildSystem(voice) {
+function loadVoice(brand) {
+  const path = voicePath(brand);
+  if (!existsSync(path)) {
+    throw new Error(`Missing ${path}. Paste the brand voice file before drafting.`);
+  }
+  return readFileSync(path, 'utf8');
+}
+
+export function buildSystem(voice, brand) {
   return [
-    "You draft social-media captions as FüGï. The voice guidelines below are the authority — match them. Never break voice for engagement bait, hype, or 'thrilled to announce' filler. Return only the caption text — no preamble, no quotes, no notes, no explanation.",
+    `You draft social-media captions for the "${brand}" brand. The voice guidelines below are the authority — match them. Never break voice for engagement bait, hype, or "thrilled to announce" filler. Return only the caption text — no preamble, no quotes, no notes, no explanation.`,
     '',
     '--- VOICE GUIDELINES ---',
     voice,
   ].join('\n');
 }
 
-export async function draftCopy({ idea, platform }) {
+export async function draftCopy({ brand, idea, platform }) {
   if (!idea || typeof idea !== 'string') {
     throw new Error('draftCopy: idea (string) required');
   }
@@ -31,7 +38,7 @@ export async function draftCopy({ idea, platform }) {
   }
 
   const plat = getPlatform(platform);
-  const voice = loadVoice();
+  const voice = loadVoice(brand);
   const client = new Anthropic();
 
   const userMsg = [
@@ -45,7 +52,7 @@ export async function draftCopy({ idea, platform }) {
     model: MODEL,
     max_tokens: 1024,
     thinking: { type: 'adaptive' },
-    system: buildSystem(voice),
+    system: buildSystem(voice, brand),
     messages: [{ role: 'user', content: userMsg }],
   });
 
@@ -56,15 +63,15 @@ export async function draftCopy({ idea, platform }) {
     .trim();
 }
 
-// CLI: node src/copy.js "idea" [platform]
+// CLI: node src/copy.js <brand> "idea" [platform]
 const isCli = import.meta.url === `file://${process.argv[1]}`;
 if (isCli) {
-  const [idea, platform = 'tiktok'] = process.argv.slice(2);
-  if (!idea) {
-    console.error('usage: node src/copy.js "idea text" [platform]');
+  const [brand, idea, platform = 'tiktok'] = process.argv.slice(2);
+  if (!brand || !idea) {
+    console.error('usage: node src/copy.js <brand> "idea text" [platform]');
     process.exit(1);
   }
-  draftCopy({ idea, platform })
+  draftCopy({ brand, idea, platform })
     .then((caption) => console.log(caption))
     .catch((err) => {
       console.error(err.message);

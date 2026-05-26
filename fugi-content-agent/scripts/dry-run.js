@@ -1,22 +1,34 @@
 #!/usr/bin/env node
 // Dry-run for src/copy.js. Builds the exact request body that would hit
 // the Anthropic API and runs a mock response through the same parse
-// logic. No API call, no tokens spent. Useful for iterating on the
+// logic. No API call, no tokens spent. Useful for iterating on a
 // voice file or the system prompt without burning budget.
 //
-// Usage: node scripts/dry-run.js ["idea"] [platform]
+// Usage: node scripts/dry-run.js <brand> ["idea"] [platform]
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { getPlatform } from '../src/platforms.js';
-import { MODEL, buildSystem } from '../src/copy.js';
+import { MODEL, buildSystem, voicePath } from '../src/copy.js';
 
 const [
+  brand,
   idea = 'teaser for the Morph filter sweep demo',
   platform = 'tiktok',
 ] = process.argv.slice(2);
 
+if (!brand) {
+  console.error('usage: node scripts/dry-run.js <brand> ["idea"] [platform]');
+  console.error('example: node scripts/dry-run.js bs "soft launch of the Whisper Spoon"');
+  process.exit(1);
+}
+
 const plat = getPlatform(platform);
-const voice = readFileSync('brand/voice_guidelines.md', 'utf8');
+const vp = voicePath(brand);
+if (!existsSync(vp)) {
+  console.error(`Missing ${vp}. Paste the brand voice file before running.`);
+  process.exit(1);
+}
+const voice = readFileSync(vp, 'utf8');
 
 const userMsg = [
   `Platform: ${plat.name} (caption max ${plat.maxChars} chars; ${plat.allowNewlines ? 'newlines OK' : 'single line'})`,
@@ -29,11 +41,11 @@ const requestBody = {
   model: MODEL,
   max_tokens: 1024,
   thinking: { type: 'adaptive' },
-  system: buildSystem(voice),
+  system: buildSystem(voice, brand),
   messages: [{ role: 'user', content: userMsg }],
 };
 
-console.log('=== REQUEST PAYLOAD — what would POST to /v1/messages ===');
+console.log(`=== REQUEST PAYLOAD (brand: ${brand}) — what would POST to /v1/messages ===`);
 console.log(JSON.stringify(requestBody, null, 2));
 
 // Plausible mock response. Includes a thinking block to prove the
@@ -47,11 +59,11 @@ const mockResponse = {
     {
       type: 'thinking',
       thinking:
-        'TikTok wants a punchy first line. Voice file: lead with the thing, specifics over adjectives, no hype. Name the synth and the technique.',
+        'Lead with the thing. Specifics over adjectives. Match the voice file.',
     },
     {
       type: 'text',
-      text: 'Morph. Filter sweep, no drums. Cutoff opens slow across 32 bars while the saturator melts the top end.\n\nfull demo tomorrow.',
+      text: '[mocked caption — real one comes from the API]',
     },
   ],
   stop_reason: 'end_turn',
@@ -61,7 +73,6 @@ const mockResponse = {
 console.log('\n=== MOCK RESPONSE — what the SDK would hand back ===');
 console.log(JSON.stringify(mockResponse, null, 2));
 
-// Same parse logic as draftCopy() in src/copy.js.
 const returned = mockResponse.content
   .filter((b) => b.type === 'text')
   .map((b) => b.text)
