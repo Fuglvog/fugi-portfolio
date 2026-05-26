@@ -115,6 +115,14 @@ missing or stubbed — ask for it. Files:
   - **`src/formatter.js` shipped.** Pure function: collapses newlines for
     X (single-line only), truncates to `maxChars` on word boundary with
     `…`, warns to stderr on truncation. No I/O.
-  - Next: `art.js` (blocked on visual_identity.md + fal_ai_templates.md
-    being filled in) or `orchestrator.js` (can ship now — art.js can
-    return a placeholder until brand visuals land).
+  - **`src/orchestrator.js` shipped.** Chains
+    `draftCopy → formatCaption → buildArtPrompt → appendPost`. Art.js
+    refactored from a module-load throw into an exported function;
+    orchestrator catches its current throw and leaves `art_prompt` empty
+    in the CSV. When art.js is implemented, no orchestrator change needed.
+  - `out/posts.csv` added to .gitignore — it's generated handoff output,
+    not source. The `out/` directory stays via `.gitkeep`.
+  - **Pipeline is end-to-end runnable.** Operator can now run
+    `node src/orchestrator.js "idea" platform` and get a posts.csv row.
+    Art prompt empty until art.js lands.
+  - Next: `art.js` (needs visual_identity.md + fal_ai_templates.md filled).
