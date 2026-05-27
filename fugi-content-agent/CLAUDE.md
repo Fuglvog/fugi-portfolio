@@ -27,8 +27,9 @@ the BS dry-run brand can never cross-contaminate.
 
 ### The 3 layers (we are ONLY building layer 1)
 1. **CREATION** ← this agent
-   Caption in FüGï's voice + fal.ai prompt string + per-platform formatting.
-2. **SCHEDULE / PUBLISH** ← bought (Buffer or SocialPilot). NOT built here.
+   Caption in brand voice + fal.ai prompt string + per-platform formatting +
+   Publer-shaped export.
+2. **SCHEDULE / PUBLISH** ← bought (**Publer**). NOT built here.
 3. **ENGAGEMENT** ← manual. Auto-likes/comments = 2026 ban risk. Skip.
 
 ### Out of scope (do not build, do not suggest)
@@ -57,19 +58,29 @@ the BS dry-run brand can never cross-contaminate.
  └──┬──┘  └──┬──┘  └────┬────┘
     └────────┴──────────┘
                 ▼
-     out/<brand>/posts.csv  (datetime, platform, caption, art_prompt, media_path)
+     out/<brand>/posts.csv  (internal: datetime, platform, caption, art_prompt, media_path)
+                │
+                ▼   scripts/to-publer.js <brand>
+                ▼
+     out/<brand>/publer/<platform>.csv  (Publer's 12-column schema, one file per platform)
                 │
                 ▼
-      operator generates art separately, fills media_path,
-            imports CSV → Buffer / SocialPilot
+      operator generates art separately, fills media_path (public URL),
+            imports each per-platform CSV → Publer Workspace
 ```
 
 - **COPY** drafts caption from `brands/<brand>/voice_guidelines.md`.
 - **ART** emits a fal.ai prompt string built from
   `brands/<brand>/fal_ai_templates.md` + `brands/<brand>/visual_identity.md`.
-  **It does NOT call fal.ai.** Operator generates the image separately and
-  fills `media_path` by hand.
+  **It does NOT call fal.ai.** Operator generates the image separately,
+  uploads it somewhere with a public URL (S3 / Cloudinary / Drive public
+  link), and pastes that URL into `media_path` — Publer does NOT accept
+  local file paths.
 - **FORMATTER** adapts the caption per platform (TikTok / IG / X / YouTube).
+- **PUBLER EXPORT** (`scripts/to-publer.js`) splits the internal CSV by
+  platform and emits Publer-shaped files. Convention: 1 brand = 1 Publer
+  Workspace; import each per-platform file separately, selecting only
+  that platform's connected accounts at upload.
 - Output is a **CSV handoff** — no direct API push, no OAuth, nothing to
   debug from a phone.
 
@@ -150,7 +161,7 @@ art prompts for now.
 
 ## Session log
 
-- **2026-05-26 — Session 2. BS-brand dry run.**
+- **2026-05-26 — Session 2. BS-brand dry run + Publer pivot.**
   - Goal: prove the full create → schedule → publish loop end-to-end on a
     throwaway brand before risking FüGï content. FüGï creative work paused.
   - Merged `claude/fugi-content-agent-4GQ58` (Session 1 pipeline) into
@@ -164,8 +175,25 @@ art prompts for now.
     updated to `out/**/*.csv`.
   - System prompt in `buildSystem(voice, brand)` now references the brand
     by name instead of hardcoded "FüGï".
-  - **Buffer CSV format flagged as uncertain** — operator to verify on
-    Buffer's site before importing.
+  - **Drafted `brands/bs/voice_guidelines.md`** — BebeWORLDWIDE, meme-tier
+    YouTube channel. First-pass captions generated for 3 ideas × 4
+    platforms.
+  - **Pivoted scheduler target Buffer → Publer.** Verified Publer's
+    12-column schema directly from their S3-hosted template (publer.com
+    docs themselves were 403-blocked from WebFetch). Added
+    `scripts/to-publer.js <brand>` — reads `out/<brand>/posts.csv`,
+    writes per-platform `out/<brand>/publer/<platform>.csv` with
+    Publer's headers. Convention: 1 brand = 1 Publer Workspace; import
+    each per-platform file separately and select that platform's
+    connected accounts at upload time.
+  - Internal CSV columns (`datetime, platform, caption, art_prompt,
+    media_path`) unchanged — it's the source of truth. Publer export is
+    a derived view: `art_prompt` and `platform` dropped (internal-only),
+    everything else mapped or defaulted blank.
+  - **Media gotcha:** Publer requires public URLs in `Media URL(s)`.
+    Local paths in `media_path` will produce a warning from
+    `to-publer.js` but pass through unchanged — operator uploads media
+    and replaces with the public URL before Publer import.
 
 - **2026-05-25 — Session 1.**
   - Bootstrapped repo + CLAUDE.md.

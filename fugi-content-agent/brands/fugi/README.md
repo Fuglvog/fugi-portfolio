@@ -16,5 +16,9 @@ rather than hallucinate brand voice.
 ## Usage
 ```
 node src/orchestrator.js fugi "your idea" tiktok
+node scripts/to-publer.js fugi      # transforms posts.csv → publer/<platform>.csv
 ```
-Output goes to `out/fugi/posts.csv`.
+Internal CSV: `out/fugi/posts.csv` (source of truth).
+Publer exports: `out/fugi/publer/<platform>.csv` (one file per platform —
+import each into the FüGï Publer Workspace, select that platform's
+accounts at upload).

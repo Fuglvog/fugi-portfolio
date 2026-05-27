@@ -15,6 +15,10 @@ hallucinate voice.
 
 ## Usage
 ```
-node src/orchestrator.js bs "your idea" tiktok
+node src/orchestrator.js bs "your idea" youtube
+node scripts/to-publer.js bs        # transforms posts.csv → publer/<platform>.csv
 ```
-Output goes to `out/bs/posts.csv` — separate from FüGï's CSV.
+Internal CSV: `out/bs/posts.csv` (source of truth, separate from FüGï's).
+Publer exports: `out/bs/publer/<platform>.csv` (one file per platform —
+import each into the BebeWORLDWIDE Publer Workspace, select that
+platform's accounts at upload).
