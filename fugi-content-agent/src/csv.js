@@ -2,7 +2,18 @@ import { stringify } from 'csv-stringify/sync';
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-const HEADERS = ['datetime', 'platform', 'caption', 'art_prompt', 'media_path'];
+export const HEADERS = [
+  'datetime',
+  'platform',
+  'caption',
+  'media_prompt',
+  'media_path',
+  'media_kind',
+  'media_mode',
+  'media_template_id',
+  'media_model',
+  'source_image_url',
+];
 
 export function csvPath(brand) {
   if (!brand || typeof brand !== 'string') {
@@ -17,11 +28,8 @@ export function appendPost(row, brand) {
   if (!existsSync(path)) {
     writeFileSync(path, stringify([HEADERS]));
   }
-  appendFileSync(path, stringify([[
-    row.datetime,
-    row.platform,
-    row.caption,
-    row.art_prompt,
-    row.media_path ?? '',
-  ]]));
+  appendFileSync(
+    path,
+    stringify([HEADERS.map((h) => row[h] ?? '')]),
+  );
 }

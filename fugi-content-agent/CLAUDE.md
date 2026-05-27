@@ -38,7 +38,13 @@ the BS dry-run brand can never cross-contaminate.
 - Auto-engagement (likes, comments, follows, DMs).
 - Analytics dashboards.
 - Long-running servers.
-- **Direct art generation** — see ART note below.
+
+### Scope expansion (Session 3): direct art + video generation IS in scope.
+Operator brought in `art.js` + `video.js` that call fal.ai directly and
+return public URLs. Replaces the original "ART emits prompt string only"
+constraint. Cost is the real check now — fal.ai calls are billed per
+generation, so the orchestrator only invokes art/video when the operator
+passes an explicit `--media` flag (manual decision, not auto).
 
 ---
 
@@ -58,7 +64,10 @@ the BS dry-run brand can never cross-contaminate.
  └──┬──┘  └──┬──┘  └────┬────┘
     └────────┴──────────┘
                 ▼
-     out/<brand>/posts.csv  (internal: datetime, platform, caption, art_prompt, media_path)
+     out/<brand>/posts.csv  (internal: datetime, platform, caption,
+                             media_prompt, media_path, media_kind,
+                             media_mode, media_template_id, media_model,
+                             source_image_url)
                 │
                 ▼   scripts/to-publer.js <brand>
                 ▼
@@ -70,17 +79,27 @@ the BS dry-run brand can never cross-contaminate.
 ```
 
 - **COPY** drafts caption from `brands/<brand>/voice_guidelines.md`.
-- **ART** emits a fal.ai prompt string built from
-  `brands/<brand>/fal_ai_templates.md` + `brands/<brand>/visual_identity.md`.
-  **It does NOT call fal.ai.** Operator generates the image separately,
-  uploads it somewhere with a public URL (S3 / Cloudinary / Drive public
-  link), and pastes that URL into `media_path` — Publer does NOT accept
-  local file paths.
+- **ART** (`src/art.js`) reads `brands/<brand>/fal_ai_templates.md`,
+  picks a template by `(mode, aspect)` based on the caption + idea,
+  fills the `{SUBJECT}` slot, calls fal.ai, and returns a public image
+  URL. Mode taxonomy: `cozy` / `cursed` / `deep_fried` (BS-brand
+  specific keyword sets — FüGï will need its own pass).
+- **VIDEO** (`src/video.js`) is the same idea for video. Two paths:
+  `t2v` (text-to-video) by default, `i2v` (image-to-video, generates a
+  still first then animates) when `--i2v` flag is set. Falls back to
+  deriving video templates from image templates + auto motion descriptor
+  if no `kind: video` templates exist in the brand's templates file.
 - **FORMATTER** adapts the caption per platform (TikTok / IG / X / YouTube).
+- **MEDIA-KIND DECISION:** currently **manual** via `--media image|video`
+  flag on the orchestrator. `video.js#pickMediaKind` exists for an
+  eventual auto-pick (YouTube/TikTok → video, IG → image or reel, X →
+  image or video) — see TODO in orchestrator. Manual stays the default
+  until fal.ai cost behavior is understood.
 - **PUBLER EXPORT** (`scripts/to-publer.js`) splits the internal CSV by
   platform and emits Publer-shaped files. Convention: 1 brand = 1 Publer
   Workspace; import each per-platform file separately, selecting only
-  that platform's connected accounts at upload.
+  that platform's connected accounts at upload. `media_path` URLs come
+  from fal directly so they're already public.
 - Output is a **CSV handoff** — no direct API push, no OAuth, nothing to
   debug from a phone.
 
@@ -160,6 +179,33 @@ art prompts for now.
 ---
 
 ## Session log
+
+- **2026-05-27 — Session 3. Art + video integration.**
+  - Operator brought in two CommonJS files (`art.js`, `video.js`) that
+    call fal.ai directly. Converted both to ESM and dropped into
+    `src/`. **Scope expansion:** "direct art generation" is no longer
+    out-of-scope (see updated Out-of-scope section).
+  - Drafted `brands/bs/fal_ai_templates.md`: 6 templates covering
+    `cozy` / `cursed` / `deep_fried` × `9:16` / `1:1`, all using
+    `fal-ai/flux/schnell`. FüGï templates intentionally untouched —
+    separate pass when operator gets back to FüGï.
+  - **CSV columns expanded** from 5 to 10:
+    `datetime, platform, caption, media_prompt, media_path,
+    media_kind, media_mode, media_template_id, media_model,
+    source_image_url`. Old `art_prompt` renamed to `media_prompt`
+    since it now covers both image and video prompts. CSVs are
+    gitignored and operator-regenerable, so no migration needed.
+  - **Orchestrator gains `--media`, `--mode`, `--i2v` flags.**
+    Default behavior (no `--media`) = caption only, no fal.ai call,
+    no cost. `--media image` → `generateArt`. `--media video` →
+    `generateVideo` (t2v); add `--i2v` to force generate-still-then-
+    animate. TODO comment left in orchestrator pointing at
+    `pickMediaKind` for a future auto-decision rewrite.
+  - **Dependency added:** `@fal-ai/serverless-client`.
+  - **Env var added:** `FAL_KEY` (only consumed when `--media` is
+    passed; `.env.example` updated).
+  - `scripts/to-publer.js` needs no changes — operates on column
+    names that still exist (`datetime`, `caption`, `media_path`).
 
 - **2026-05-26 — Session 2. BS-brand dry run + Publer pivot.**
   - Goal: prove the full create → schedule → publish loop end-to-end on a
